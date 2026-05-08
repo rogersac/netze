@@ -354,6 +354,10 @@ body {
           flex: 0 0 auto;
 }
 
+.control-field-inline {
+  margin-left: auto;
+}
+
 .control-field span {
   margin-bottom: 0.5vh;
 }
@@ -483,6 +487,10 @@ body {
 
   .controls-row > *:last-child {
     margin-bottom: 0;
+  }
+
+  .control-field-inline {
+    margin-left: 0;
   }
 
   .custom-url-row {
