@@ -37,31 +37,32 @@
 
     <div id="controlsHint" class="controls-hint">Tap anywhere to show controls</div>
 
-    <div id="controlsOverlay" class="controls-overlay">
-      <div class="controls-card">
+    <div id="controlsOverlay" class="controls-panel">
+      <div class="controls-header">
         <div class="controls-title">Controls</div>
-        <div class="controls-row">
-          <button id="refreshNowButton" class="control-button" type="button">Refresh Now</button>
-          <button id="toggleAutoButton" class="control-button" type="button">Auto: On</button>
-          <button id="toggleDetailsButton" class="control-button" type="button">Details: On</button>
-        </div>
-        <div class="controls-row controls-row-stack">
-          <label class="control-field">
-            <span>Refresh Interval</span>
-            <select id="intervalSelect" class="control-select">
-              <option value="15000">15 seconds</option>
-              <option value="30000">30 seconds</option>
-              <option value="60000">60 seconds</option>
-            </select>
-          </label>
-          <label class="control-field control-field-wide">
-            <span>Custom Check URL</span>
-            <div class="custom-url-row">
-              <input id="customUrlInput" class="control-input" type="text" placeholder="https://example.com/health">
-              <button id="saveCustomUrlButton" class="control-button control-button-small" type="button">Apply</button>
-            </div>
-          </label>
-        </div>
+        <button id="closeControlsButton" class="control-button control-close-button" type="button" aria-label="Close controls">X</button>
+      </div>
+      <div class="controls-row">
+        <button id="refreshNowButton" class="control-button" type="button">Refresh Now</button>
+        <button id="toggleAutoButton" class="control-button" type="button">Auto: On</button>
+        <button id="toggleDetailsButton" class="control-button" type="button">Details: On</button>
+      </div>
+      <div class="controls-row controls-row-stack">
+        <label class="control-field">
+          <span>Refresh Interval</span>
+          <select id="intervalSelect" class="control-select">
+            <option value="15000">15 seconds</option>
+            <option value="30000">30 seconds</option>
+            <option value="60000">60 seconds</option>
+          </select>
+        </label>
+        <label class="control-field control-field-wide">
+          <span>Custom Check URL</span>
+          <div class="custom-url-row">
+            <input id="customUrlInput" class="control-input" type="text" placeholder="https://example.com/health">
+            <button id="saveCustomUrlButton" class="control-button control-button-small" type="button">Apply</button>
+          </div>
+        </label>
       </div>
     </div>
   </div>

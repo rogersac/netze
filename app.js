@@ -11,6 +11,7 @@
     customUrl: '',
     isChecking: false,
     pendingRefresh: false,
+    controlsVisible: false,
     refreshTimer: null,
     controlsTimer: null,
     lastCheckedAt: null,
@@ -78,7 +79,8 @@
     elements.detailsPanel = document.getElementById('detailsPanel');
     elements.endpointList = document.getElementById('endpointList');
     elements.controlsHint = document.getElementById('controlsHint');
-    elements.controlsOverlay = document.getElementById('controlsOverlay');
+    elements.controlsPanel = document.getElementById('controlsOverlay');
+    elements.closeControlsButton = document.getElementById('closeControlsButton');
     elements.refreshNowButton = document.getElementById('refreshNowButton');
     elements.toggleAutoButton = document.getElementById('toggleAutoButton');
     elements.toggleDetailsButton = document.getElementById('toggleDetailsButton');
@@ -174,6 +176,14 @@
   }
 
   function bindEvents() {
+    elements.closeControlsButton.addEventListener('click', function (event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      hideControls();
+    });
+
     elements.refreshNowButton.addEventListener('click', function () {
       runChecks();
       resetControlsTimer();
@@ -219,7 +229,7 @@
     document.addEventListener('click', handleUserPresence, true);
     document.addEventListener('touchstart', handleUserPresence, true);
     document.addEventListener('mousemove', function () {
-      if (elements.controlsOverlay.classList.contains('active')) {
+      if (state.controlsVisible) {
         resetControlsTimer();
       }
     }, true);
@@ -236,14 +246,19 @@
   }
 
   function showControls() {
-    elements.controlsOverlay.classList.add('active');
-    elements.controlsHint.style.opacity = '0';
+    state.controlsVisible = true;
+    renderPanelVisibility();
     resetControlsTimer();
   }
 
   function hideControls() {
-    elements.controlsOverlay.classList.remove('active');
-    elements.controlsHint.style.opacity = '1';
+    if (state.controlsTimer) {
+      clearTimeout(state.controlsTimer);
+      state.controlsTimer = null;
+    }
+
+    state.controlsVisible = false;
+    renderPanelVisibility();
   }
 
   function resetControlsTimer() {
@@ -507,11 +522,24 @@
   function render() {
     renderMeta();
     renderEndpoints();
+    renderPanelVisibility();
+  }
 
-    if (state.showDetails) {
+  function renderPanelVisibility() {
+    var showDetailsPanel = state.showDetails && !state.controlsVisible;
+
+    if (showDetailsPanel) {
       elements.app.classList.remove('details-hidden');
     } else {
       elements.app.classList.add('details-hidden');
+    }
+
+    if (state.controlsVisible) {
+      elements.app.classList.remove('controls-hidden');
+      elements.controlsHint.style.opacity = '0';
+    } else {
+      elements.app.classList.add('controls-hidden');
+      elements.controlsHint.style.opacity = '1';
     }
   }
 

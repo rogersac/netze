@@ -9,7 +9,7 @@ A simple static dashboard that shows internet and endpoint health in a fullscree
 - Overall status states: `ONLINE`, `DEGRADED`, `OFFLINE`, and `CHECKING...`
 - Periodic checks against multiple lightweight endpoints
 - Per-endpoint status, latency, and last checked time
-- Hidden controls overlay that appears on tap and auto-hides after 10 seconds
+- Hidden controls panel that appears on tap, replaces the details panel, and auto-hides after 10 seconds
 - Configurable auto-refresh interval: `15s`, `30s`, or `60s`
 - Optional custom endpoint URL
 - Simple stability counter that shows how long the system has remained fully healthy

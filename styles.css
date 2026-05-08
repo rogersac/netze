@@ -1,7 +1,6 @@
 :root {
   --bg: #050505;
   --bg-panel: rgba(255, 255, 255, 0.05);
-  --bg-overlay: rgba(0, 0, 0, 0.72);
   --text: #f5f7fa;
   --muted: #95a0aa;
   --green: #35d07f;
@@ -54,7 +53,8 @@ body {
 }
 
 .status-panel,
-.details-panel {
+.details-panel,
+.controls-panel {
   width: 100%;
   max-width: 1200px;
   background: var(--bg-panel);
@@ -143,7 +143,8 @@ body {
   font-weight: 600;
 }
 
-.details-panel {
+.details-panel,
+.controls-panel {
   padding: 2.4vh 2vw;
 }
 
@@ -235,11 +236,12 @@ body {
   color: var(--muted);
 }
 
-.details-hidden .details-panel {
+.details-hidden .details-panel,
+.controls-hidden .controls-panel {
   display: none;
 }
 
-.details-hidden .status-panel {
+.details-hidden.controls-hidden .status-panel {
   margin-bottom: 0;
 }
 
@@ -253,46 +255,26 @@ body {
   pointer-events: none;
 }
 
-.controls-overlay {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: end;
-      -ms-flex-align: end;
-          align-items: flex-end;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
-  padding: 2vh 2vw;
-  background: linear-gradient(to top, var(--bg-overlay), rgba(0, 0, 0, 0));
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 180ms ease;
-}
-
-.controls-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.controls-card {
-  width: 100%;
-  max-width: 1200px;
-  padding: 1.6vh 1.5vw;
+.controls-panel {
   background: rgba(10, 10, 10, 0.95);
-  border: 1px solid var(--border);
-  border-radius: 16px;
 }
 
 .controls-title {
-  margin-bottom: 1.2vh;
   font-size: 12px;
   color: var(--muted);
+}
+
+.controls-header {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  margin-bottom: 1.2vh;
 }
 
 .controls-row {
@@ -342,6 +324,21 @@ body {
 
 .control-button-small {
   min-width: 96px;
+}
+
+.control-close-button {
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  margin-top: -0.4vh;
+  margin-right: -0.3vw;
+  background: var(--red);
+  color: #000;
+  border-radius: 999px;
+  font-size: 16px;
+  line-height: 36px;
+  text-align: center;
 }
 
 .control-field {
@@ -463,6 +460,20 @@ body {
     -webkit-box-direction: normal;
         -ms-flex-direction: column;
             flex-direction: column;
+  }
+
+  .controls-header {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    -webkit-box-align: start;
+        -ms-flex-align: start;
+            align-items: flex-start;
+  }
+
+  .control-close-button {
+    margin-top: 1vh;
   }
 
   .controls-row > * {
