@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Internet Health HUD</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <div class="status-panel">
+      <div class="status-label">SYSTEM HEALTH</div>
+      <div id="overallStatus" class="overall-status status-checking">CHECKING...</div>
+      <div id="statusSummary" class="status-summary">Preparing network checks</div>
+      <div class="meta-grid">
+        <div class="meta-card">
+          <div class="meta-label">LAST CHECK</div>
+          <div id="lastChecked" class="meta-value">--:--:--</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">AUTO REFRESH</div>
+          <div id="refreshState" class="meta-value">30s</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">STABLE FOR</div>
+          <div id="uptimeValue" class="meta-value">--:--:--</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="detailsPanel" class="details-panel">
+      <div class="details-header">ENDPOINT STATUS</div>
+      <div id="endpointList" class="endpoint-list"></div>
+    </div>
+
+    <div id="controlsHint" class="controls-hint">Tap anywhere to show controls</div>
+
+    <div id="controlsOverlay" class="controls-overlay">
+      <div class="controls-card">
+        <div class="controls-title">Controls</div>
+        <div class="controls-row">
+          <button id="refreshNowButton" class="control-button" type="button">Refresh Now</button>
+          <button id="toggleAutoButton" class="control-button" type="button">Auto: On</button>
+          <button id="toggleDetailsButton" class="control-button" type="button">Details: On</button>
+        </div>
+        <div class="controls-row controls-row-stack">
+          <label class="control-field">
+            <span>Refresh Interval</span>
+            <select id="intervalSelect" class="control-select">
+              <option value="15000">15 seconds</option>
+              <option value="30000">30 seconds</option>
+              <option value="60000">60 seconds</option>
+            </select>
+          </label>
+          <label class="control-field control-field-wide">
+            <span>Custom Check URL</span>
+            <div class="custom-url-row">
+              <input id="customUrlInput" class="control-input" type="text" placeholder="https://example.com/health">
+              <button id="saveCustomUrlButton" class="control-button control-button-small" type="button">Apply</button>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
