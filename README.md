@@ -7,11 +7,12 @@ A simple static dashboard that shows internet and endpoint health in a fullscree
 - Fullscreen, no-scroll layout with large, room-readable typography
 - Dark monitoring-style interface
 - Overall status states: `ONLINE`, `DEGRADED`, `OFFLINE`, and `CHECKING...`
-- Periodic checks against multiple lightweight endpoints
+- Periodic checks against up to 10 lightweight endpoints
 - Per-endpoint status, latency, and last checked time
-- Hidden controls panel that appears on tap, replaces the details panel, and auto-hides after 10 seconds
+- Hidden controls modal that appears on tap and auto-hides after 10 seconds of inactivity
 - Configurable auto-refresh interval: `15s`, `30s`, or `60s`
-- Optional custom endpoint URL
+- Editable default endpoints and support for adding or removing endpoints
+- Scrollable endpoint-status list and scrollable endpoint editor list
 - Simple stability counter that shows how long the system has remained fully healthy
 - No frameworks, no build step, no dependencies
 
@@ -26,20 +27,22 @@ A simple static dashboard that shows internet and endpoint health in a fullscree
 The app runs entirely in the browser using plain JavaScript.
 
 1. On startup it shows `CHECKING...`
-2. It performs network checks against:
+2. It performs network checks against a configurable list of up to 10 endpoints
+3. By default, the first two endpoints are:
    - `https://www.google.com/generate_204`
    - `https://cloudflare.com/cdn-cgi/trace`
-   - An optional custom URL you set in the controls
-3. Each check records:
+4. You can edit those defaults, add more endpoints, disable endpoints, or remove endpoints from the controls modal
+5. Each check records:
    - Reachability (`OK` or `FAIL`)
    - Approximate latency in milliseconds
    - The time of the last completed check
-4. The overall status is calculated as:
+6. The overall status is calculated as:
    - `ONLINE` when all active endpoints are reachable
    - `DEGRADED` when some succeed and some fail
    - `OFFLINE` when all active endpoints fail
 
 The page never reloads. It updates the DOM in place and reuses the same UI nodes to keep memory use low.
+The overall page does not scroll. If the endpoint list grows, only the endpoint-status panel scrolls. When controls are open, the modal stays fixed and only the endpoint editor list inside the modal scrolls.
 
 ## Running Locally
 
@@ -90,28 +93,16 @@ If you want stricter health semantics for a custom endpoint, use a lightweight U
 
 ## Customizing Endpoints
 
-Default endpoints are defined near the top of `app.js` in the `state.endpoints` array.
+Open the controls modal and use the `Endpoints` section to manage the list.
 
-You can change:
+You can:
 
-- The display label
-- The URL
-- Which built-in endpoints are enabled by default
+- Edit the label and URL for any endpoint, including the two default endpoints
+- Enable or disable endpoints without deleting them
+- Add more endpoints until you reach the 10-endpoint limit
+- Remove endpoints you no longer want to check
 
-Example:
-
-```js
-{
-  id: 'custom-api',
-  label: 'Office Gateway',
-  url: 'https://status.example.com/ping',
-  enabled: true,
-  optional: false,
-  result: createInitialResult('Waiting')
-}
-```
-
-You can also set a custom check URL from the on-screen controls. That value is saved in `localStorage` so it persists on the device.
+All endpoint settings are saved in `localStorage`, so they persist on the device.
 
 ## Suggested Kiosk Usage
 

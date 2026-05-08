@@ -10,59 +10,74 @@
 </head>
 <body>
   <div id="app" class="app">
-    <div class="status-panel">
-      <div class="status-label">SYSTEM HEALTH</div>
-      <div id="overallStatus" class="overall-status status-checking">CHECKING...</div>
-      <div id="statusSummary" class="status-summary">Preparing network checks</div>
-      <div class="meta-grid">
-        <div class="meta-card">
-          <div class="meta-label">LAST CHECK</div>
-          <div id="lastChecked" class="meta-value">--:--:--</div>
-        </div>
-        <div class="meta-card">
-          <div class="meta-label">AUTO REFRESH</div>
-          <div id="refreshState" class="meta-value">30s</div>
-        </div>
-        <div class="meta-card">
-          <div class="meta-label">STABLE FOR</div>
-          <div id="uptimeValue" class="meta-value">--:--:--</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="detailsPanel" class="details-panel">
-      <div class="details-header">ENDPOINT STATUS</div>
-      <div id="endpointList" class="endpoint-list"></div>
-    </div>
-
-    <div id="controlsHint" class="controls-hint">Tap anywhere to show controls</div>
-
-    <div id="controlsOverlay" class="controls-panel">
-      <div class="controls-header">
-        <div class="controls-title">Controls</div>
-        <button id="closeControlsButton" class="control-button control-close-button" type="button" aria-label="Close controls">X</button>
-      </div>
-      <div class="controls-row">
-        <button id="refreshNowButton" class="control-button" type="button">Refresh Now</button>
-        <button id="toggleAutoButton" class="control-button" type="button">Auto: On</button>
-        <button id="toggleDetailsButton" class="control-button" type="button">Details: On</button>
-        <label class="control-field control-field-inline">
-          <span>Refresh Interval</span>
-          <select id="intervalSelect" class="control-select">
-            <option value="15000">15 seconds</option>
-            <option value="30000">30 seconds</option>
-            <option value="60000">60 seconds</option>
-          </select>
-        </label>
-      </div>
-      <div class="controls-row controls-row-stack">
-        <label class="control-field control-field-wide">
-          <span>Custom Check URL</span>
-          <div class="custom-url-row">
-            <input id="customUrlInput" class="control-input" type="text" placeholder="https://example.com/health">
-            <button id="saveCustomUrlButton" class="control-button control-button-small" type="button">Apply</button>
+    <div id="dashboard" class="dashboard">
+      <div class="status-panel">
+        <div class="status-label">SYSTEM HEALTH</div>
+        <div id="overallStatus" class="overall-status status-checking">CHECKING...</div>
+        <div id="statusSummary" class="status-summary">Preparing network checks</div>
+        <div class="meta-grid">
+          <div class="meta-card">
+            <div class="meta-label">LAST CHECK</div>
+            <div id="lastChecked" class="meta-value">--:--:--</div>
           </div>
-        </label>
+          <div class="meta-card">
+            <div class="meta-label">AUTO REFRESH</div>
+            <div id="refreshState" class="meta-value">30s</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">STABLE FOR</div>
+            <div id="uptimeValue" class="meta-value">--:--:--</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="detailsPanel" class="details-panel">
+        <div class="details-header-row">
+          <div class="details-header">ENDPOINT STATUS</div>
+          <div id="endpointCount" class="details-count">0 configured</div>
+        </div>
+        <div id="endpointScroll" class="endpoint-scroll">
+          <div id="endpointList" class="endpoint-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="controlsHint" class="controls-hint">Tap anywhere to open controls</div>
+
+    <div id="controlsModal" class="controls-modal">
+      <div id="controlsBackdrop" class="controls-backdrop"></div>
+      <div id="controlsDialog" class="controls-dialog" role="dialog" aria-modal="true" aria-label="Controls">
+        <div class="controls-header">
+          <div class="controls-title-group">
+            <div class="controls-title">Controls</div>
+            <div id="controlsSubtitle" class="controls-subtitle">Up to 10 endpoints</div>
+          </div>
+          <button id="closeControlsButton" class="control-button control-close-button" type="button" aria-label="Close controls">X</button>
+        </div>
+
+        <div class="controls-row">
+          <button id="refreshNowButton" class="control-button" type="button">Refresh Now</button>
+          <button id="toggleAutoButton" class="control-button" type="button">Auto: On</button>
+          <button id="toggleDetailsButton" class="control-button" type="button">Details: On</button>
+          <label class="control-field control-field-inline">
+            <span>Refresh Interval</span>
+            <select id="intervalSelect" class="control-select">
+              <option value="15000">15 seconds</option>
+              <option value="30000">30 seconds</option>
+              <option value="60000">60 seconds</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <div class="controls-section-header">
+            <div class="controls-section-title">Endpoints</div>
+            <button id="addEndpointButton" class="control-button control-button-small" type="button">Add Endpoint</button>
+          </div>
+          <div id="endpointEditorScroll" class="endpoint-editor-scroll">
+            <div id="endpointEditorList" class="endpoint-editor-list"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

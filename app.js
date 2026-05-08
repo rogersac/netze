@@ -3,12 +3,12 @@
   var DEFAULT_INTERVAL = 30000;
   var CONTROL_TIMEOUT = 10000;
   var CHECK_TIMEOUT = 8000;
+  var MAX_ENDPOINTS = 10;
 
   var state = {
     autoRefresh: true,
     interval: DEFAULT_INTERVAL,
     showDetails: true,
-    customUrl: '',
     isChecking: false,
     pendingRefresh: false,
     controlsVisible: false,
@@ -16,82 +16,54 @@
     controlsTimer: null,
     lastCheckedAt: null,
     stableSince: null,
-    startedAt: Date.now(),
-    endpoints: [
-      {
-        id: 'google',
-        label: 'Google 204',
-        url: 'https://www.google.com/generate_204',
-        enabled: true,
-        optional: false,
-        result: createInitialResult('Waiting')
-      },
-      {
-        id: 'cloudflare',
-        label: 'Cloudflare Trace',
-        url: 'https://cloudflare.com/cdn-cgi/trace',
-        enabled: true,
-        optional: false,
-        result: createInitialResult('Waiting')
-      },
-      {
-        id: 'custom',
-        label: 'Custom Endpoint',
-        url: '',
-        enabled: false,
-        optional: true,
-        result: createInitialResult('Not set')
-      }
-    ],
-    rows: {}
+    endpoints: [],
+    statusRows: {},
+    editorRows: {}
   };
 
   var elements = {};
 
-  function createInitialResult(message) {
-    return {
-      ok: null,
-      statusLabel: message,
-      latency: null,
-      checkedAt: null,
-      error: ''
-    };
-  }
-
   function init() {
     cacheElements();
     loadSettings();
-    buildEndpointRows();
+    rebuildEndpointViews();
     bindEvents();
     syncControls();
     render();
-    showControls();
     runChecks();
   }
 
   function cacheElements() {
     elements.app = document.getElementById('app');
+    elements.dashboard = document.getElementById('dashboard');
     elements.overallStatus = document.getElementById('overallStatus');
     elements.statusSummary = document.getElementById('statusSummary');
     elements.lastChecked = document.getElementById('lastChecked');
     elements.refreshState = document.getElementById('refreshState');
     elements.uptimeValue = document.getElementById('uptimeValue');
     elements.detailsPanel = document.getElementById('detailsPanel');
+    elements.endpointCount = document.getElementById('endpointCount');
     elements.endpointList = document.getElementById('endpointList');
     elements.controlsHint = document.getElementById('controlsHint');
-    elements.controlsPanel = document.getElementById('controlsOverlay');
+    elements.controlsModal = document.getElementById('controlsModal');
+    elements.controlsBackdrop = document.getElementById('controlsBackdrop');
+    elements.controlsDialog = document.getElementById('controlsDialog');
+    elements.controlsSubtitle = document.getElementById('controlsSubtitle');
     elements.closeControlsButton = document.getElementById('closeControlsButton');
     elements.refreshNowButton = document.getElementById('refreshNowButton');
     elements.toggleAutoButton = document.getElementById('toggleAutoButton');
     elements.toggleDetailsButton = document.getElementById('toggleDetailsButton');
     elements.intervalSelect = document.getElementById('intervalSelect');
-    elements.customUrlInput = document.getElementById('customUrlInput');
-    elements.saveCustomUrlButton = document.getElementById('saveCustomUrlButton');
+    elements.addEndpointButton = document.getElementById('addEndpointButton');
+    elements.endpointEditorList = document.getElementById('endpointEditorList');
+    elements.endpointEditorScroll = document.getElementById('endpointEditorScroll');
   }
 
   function loadSettings() {
     var raw = '';
     var saved = null;
+
+    state.endpoints = createDefaultEndpoints();
 
     try {
       raw = window.localStorage.getItem(STORAGE_KEY);
@@ -116,9 +88,8 @@
       state.showDetails = saved.showDetails;
     }
 
-    if (typeof saved.customUrl === 'string') {
-      state.customUrl = saved.customUrl;
-      setCustomEndpointUrl(saved.customUrl);
+    if (saved.endpoints && Object.prototype.toString.call(saved.endpoints) === '[object Array]') {
+      state.endpoints = normalizeSavedEndpoints(saved.endpoints);
     }
   }
 
@@ -127,7 +98,7 @@
       autoRefresh: state.autoRefresh,
       interval: state.interval,
       showDetails: state.showDetails,
-      customUrl: state.customUrl
+      endpoints: serializeEndpoints()
     };
 
     try {
@@ -137,35 +108,144 @@
     }
   }
 
-  function buildEndpointRows() {
+  function createDefaultEndpoints() {
+    return [
+      createEndpoint({
+        id: 'google-204',
+        label: 'Google 204',
+        url: 'https://www.google.com/generate_204',
+        enabled: true
+      }),
+      createEndpoint({
+        id: 'cloudflare-trace',
+        label: 'Cloudflare Trace',
+        url: 'https://cloudflare.com/cdn-cgi/trace',
+        enabled: true
+      })
+    ];
+  }
+
+  function createEndpoint(config) {
+    var endpoint = {
+      id: config && config.id ? String(config.id) : generateEndpointId(),
+      label: config && typeof config.label === 'string' ? config.label : '',
+      url: config && typeof config.url === 'string' ? trimString(config.url) : '',
+      enabled: config && typeof config.enabled === 'boolean' ? config.enabled : true,
+      result: null
+    };
+
+    endpoint.result = getIdleResult(endpoint);
+    return endpoint;
+  }
+
+  function normalizeSavedEndpoints(savedEndpoints) {
+    var normalized = [];
+    var i;
+
+    for (i = 0; i < savedEndpoints.length && normalized.length < MAX_ENDPOINTS; i += 1) {
+      if (!savedEndpoints[i] || typeof savedEndpoints[i] !== 'object') {
+        continue;
+      }
+
+      normalized.push(createEndpoint({
+        id: savedEndpoints[i].id,
+        label: savedEndpoints[i].label,
+        url: savedEndpoints[i].url,
+        enabled: typeof savedEndpoints[i].enabled === 'boolean' ? savedEndpoints[i].enabled : true
+      }));
+    }
+
+    if (!normalized.length && savedEndpoints.length) {
+      return createDefaultEndpoints();
+    }
+
+    return normalized;
+  }
+
+  function serializeEndpoints() {
+    var serialized = [];
+    var i;
+
+    for (i = 0; i < state.endpoints.length; i += 1) {
+      serialized.push({
+        id: state.endpoints[i].id,
+        label: state.endpoints[i].label,
+        url: state.endpoints[i].url,
+        enabled: state.endpoints[i].enabled
+      });
+    }
+
+    return serialized;
+  }
+
+  function generateEndpointId() {
+    return 'endpoint-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+  }
+
+  function getIdleResult(endpoint) {
+    if (!endpoint.enabled) {
+      return createResult(null, 'OFF', null, null, '');
+    }
+
+    if (!endpoint.url) {
+      return createResult(null, 'NO URL', null, null, '');
+    }
+
+    return createResult(null, 'WAITING', null, null, '');
+  }
+
+  function createResult(ok, statusLabel, latency, checkedAt, error) {
+    return {
+      ok: ok,
+      statusLabel: statusLabel,
+      latency: latency,
+      checkedAt: checkedAt,
+      error: error
+    };
+  }
+
+  function rebuildEndpointViews() {
+    rebuildStatusRows();
+    rebuildEditorRows();
+  }
+
+  function rebuildStatusRows() {
     var fragment = document.createDocumentFragment();
     var i;
+
+    state.statusRows = {};
+    clearChildren(elements.endpointList);
 
     for (i = 0; i < state.endpoints.length; i += 1) {
       var endpoint = state.endpoints[i];
       var row = document.createElement('div');
       var name = document.createElement('div');
+      var nameMain = document.createElement('div');
+      var nameSub = document.createElement('div');
       var stateCell = document.createElement('div');
       var latency = document.createElement('div');
       var checked = document.createElement('div');
 
       row.className = 'endpoint-row';
       name.className = 'endpoint-name';
+      nameMain.className = 'endpoint-name-main';
+      nameSub.className = 'endpoint-name-sub';
       stateCell.className = 'endpoint-state';
       latency.className = 'endpoint-latency';
       checked.className = 'endpoint-checked';
 
-      name.textContent = endpoint.label;
-
+      name.appendChild(nameMain);
+      name.appendChild(nameSub);
       row.appendChild(name);
       row.appendChild(stateCell);
       row.appendChild(latency);
       row.appendChild(checked);
       fragment.appendChild(row);
 
-      state.rows[endpoint.id] = {
+      state.statusRows[endpoint.id] = {
         row: row,
-        name: name,
+        nameMain: nameMain,
+        nameSub: nameSub,
         state: stateCell,
         latency: latency,
         checked: checked
@@ -175,13 +255,182 @@
     elements.endpointList.appendChild(fragment);
   }
 
+  function rebuildEditorRows() {
+    var fragment = document.createDocumentFragment();
+    var i;
+
+    state.editorRows = {};
+    clearChildren(elements.endpointEditorList);
+
+    for (i = 0; i < state.endpoints.length; i += 1) {
+      fragment.appendChild(buildEndpointEditorRow(state.endpoints[i], i));
+    }
+
+    elements.endpointEditorList.appendChild(fragment);
+  }
+
+  function buildEndpointEditorRow(endpoint, index) {
+    var row = document.createElement('div');
+    var header = document.createElement('div');
+    var editorIndex = document.createElement('div');
+    var toggleWrap = document.createElement('label');
+    var toggleLabel = document.createElement('span');
+    var checkboxRow = document.createElement('div');
+    var checkbox = document.createElement('input');
+    var checkboxText = document.createElement('span');
+    var removeButton = document.createElement('button');
+    var fields = document.createElement('div');
+    var nameField = document.createElement('label');
+    var nameSpan = document.createElement('span');
+    var nameInput = document.createElement('input');
+    var urlField = document.createElement('label');
+    var urlSpan = document.createElement('span');
+    var urlInput = document.createElement('input');
+
+    row.className = 'endpoint-editor-row';
+    header.className = 'editor-row-header';
+    editorIndex.className = 'editor-index';
+    toggleWrap.className = 'editor-toggle';
+    toggleLabel.className = 'editor-toggle-label';
+    checkboxRow.className = 'editor-checkbox-row';
+    checkbox.className = 'editor-checkbox';
+    checkbox.type = 'checkbox';
+    removeButton.className = 'control-button control-remove-button';
+    removeButton.type = 'button';
+    removeButton.textContent = 'Remove';
+    fields.className = 'editor-fields';
+    nameField.className = 'editor-field';
+    nameSpan.textContent = 'Name';
+    nameInput.className = 'editor-input';
+    nameInput.type = 'text';
+    nameInput.placeholder = 'Endpoint ' + (index + 1);
+    urlField.className = 'editor-field editor-field-wide';
+    urlSpan.textContent = 'URL';
+    urlInput.className = 'editor-input';
+    urlInput.type = 'text';
+    urlInput.placeholder = 'https://example.com/health';
+
+    toggleLabel.textContent = 'Status';
+    checkboxText.textContent = 'Enabled';
+    editorIndex.textContent = 'Endpoint ' + (index + 1);
+
+    checkboxRow.appendChild(checkbox);
+    checkboxRow.appendChild(checkboxText);
+    toggleWrap.appendChild(toggleLabel);
+    toggleWrap.appendChild(checkboxRow);
+
+    nameField.appendChild(nameSpan);
+    nameField.appendChild(nameInput);
+    urlField.appendChild(urlSpan);
+    urlField.appendChild(urlInput);
+
+    header.appendChild(editorIndex);
+    header.appendChild(toggleWrap);
+    header.appendChild(removeButton);
+    fields.appendChild(nameField);
+    fields.appendChild(urlField);
+    row.appendChild(header);
+    row.appendChild(fields);
+
+    checkbox.addEventListener('change', function () {
+      updateEndpointEnabled(endpoint.id, checkbox.checked);
+      resetControlsTimer();
+    });
+
+    nameInput.addEventListener('input', function () {
+      updateEndpointLabel(endpoint.id, nameInput.value);
+      resetControlsTimer();
+    });
+
+    urlInput.addEventListener('change', function () {
+      updateEndpointUrl(endpoint.id, urlInput.value, true);
+      resetControlsTimer();
+    });
+
+    urlInput.addEventListener('keydown', function (event) {
+      var key = event.key || event.keyCode;
+
+      if (key === 'Enter' || key === 13) {
+        updateEndpointUrl(endpoint.id, urlInput.value, true);
+      }
+    });
+
+    removeButton.addEventListener('click', function () {
+      removeEndpoint(endpoint.id);
+      resetControlsTimer();
+    });
+
+    state.editorRows[endpoint.id] = {
+      row: row,
+      editorIndex: editorIndex,
+      checkbox: checkbox,
+      nameInput: nameInput,
+      urlInput: urlInput,
+      removeButton: removeButton
+    };
+
+    return row;
+  }
+
   function bindEvents() {
+    elements.app.addEventListener('click', function (event) {
+      if (state.controlsVisible) {
+        return;
+      }
+
+      if (elements.controlsModal.contains(event.target)) {
+        return;
+      }
+
+      if (!state.controlsVisible) {
+        showControls();
+      }
+    });
+
     elements.closeControlsButton.addEventListener('click', function (event) {
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
 
       hideControls();
+    });
+
+    elements.controlsBackdrop.addEventListener('click', function (event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      hideControls();
+    });
+
+    elements.controlsDialog.addEventListener('click', function (event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      resetControlsTimer();
+    });
+
+    elements.controlsDialog.addEventListener('touchstart', function (event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      resetControlsTimer();
+    });
+
+    elements.controlsDialog.addEventListener('input', function () {
+      resetControlsTimer();
+    });
+
+    elements.controlsDialog.addEventListener('change', function () {
+      resetControlsTimer();
+    });
+
+    elements.controlsDialog.addEventListener('mousemove', function () {
+      if (state.controlsVisible) {
+        resetControlsTimer();
+      }
     });
 
     elements.refreshNowButton.addEventListener('click', function () {
@@ -201,7 +450,7 @@
       state.showDetails = !state.showDetails;
       saveSettings();
       syncControls();
-      render();
+      renderPanelVisibility();
       resetControlsTimer();
     });
 
@@ -213,36 +462,16 @@
       resetControlsTimer();
     });
 
-    elements.saveCustomUrlButton.addEventListener('click', function () {
-      applyCustomUrl();
+    elements.addEndpointButton.addEventListener('click', function () {
+      addEndpoint();
       resetControlsTimer();
     });
-
-    elements.customUrlInput.addEventListener('keydown', function (event) {
-      var key = event.key || event.keyCode;
-
-      if (key === 'Enter' || key === 13) {
-        applyCustomUrl();
-      }
-    });
-
-    document.addEventListener('click', handleUserPresence, true);
-    document.addEventListener('touchstart', handleUserPresence, true);
-    document.addEventListener('mousemove', function () {
-      if (state.controlsVisible) {
-        resetControlsTimer();
-      }
-    }, true);
 
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) {
         scheduleNextCheck();
       }
     });
-  }
-
-  function handleUserPresence() {
-    showControls();
   }
 
   function showControls() {
@@ -262,6 +491,10 @@
   }
 
   function resetControlsTimer() {
+    if (!state.controlsVisible) {
+      return;
+    }
+
     if (state.controlsTimer) {
       clearTimeout(state.controlsTimer);
     }
@@ -271,34 +504,92 @@
     }, CONTROL_TIMEOUT);
   }
 
-  function syncControls() {
-    elements.intervalSelect.value = String(state.interval);
-    elements.customUrlInput.value = state.customUrl;
-    elements.toggleAutoButton.textContent = state.autoRefresh ? 'Auto: On' : 'Auto: Off';
-    elements.toggleDetailsButton.textContent = state.showDetails ? 'Details: On' : 'Details: Off';
-    elements.refreshState.textContent = state.autoRefresh ? Math.round(state.interval / 1000) + 's' : 'Paused';
-  }
-
-  function applyCustomUrl() {
-    var value = trimString(elements.customUrlInput.value);
-
-    state.customUrl = value;
-    setCustomEndpointUrl(value);
-    saveSettings();
-    renderEndpoints();
-    runChecks();
-  }
-
-  function setCustomEndpointUrl(url) {
-    var customEndpoint = getEndpointById('custom');
-
-    if (!customEndpoint) {
+  function addEndpoint() {
+    if (state.endpoints.length >= MAX_ENDPOINTS) {
       return;
     }
 
-    customEndpoint.url = url;
-    customEndpoint.enabled = !!url;
-    customEndpoint.result = url ? createInitialResult('Waiting') : createInitialResult('Not set');
+    state.endpoints.push(createEndpoint({
+      label: '',
+      url: '',
+      enabled: false
+    }));
+
+    saveSettings();
+    rebuildEndpointViews();
+    syncControls();
+    render();
+
+    if (state.endpoints.length) {
+      var latest = state.endpoints[state.endpoints.length - 1];
+      var row = state.editorRows[latest.id];
+
+      if (row && row.nameInput && row.nameInput.focus) {
+        row.nameInput.focus();
+      }
+    }
+  }
+
+  function removeEndpoint(id) {
+    var i;
+
+    for (i = 0; i < state.endpoints.length; i += 1) {
+      if (state.endpoints[i].id === id) {
+        state.endpoints.splice(i, 1);
+        break;
+      }
+    }
+
+    saveSettings();
+    rebuildEndpointViews();
+    syncControls();
+    render();
+    runChecks();
+  }
+
+  function updateEndpointLabel(id, label) {
+    var endpoint = getEndpointById(id);
+
+    if (!endpoint) {
+      return;
+    }
+
+    endpoint.label = label;
+    saveSettings();
+    renderStatusRow(endpoint, getEndpointIndex(id));
+  }
+
+  function updateEndpointUrl(id, url, shouldRunChecks) {
+    var endpoint = getEndpointById(id);
+
+    if (!endpoint) {
+      return;
+    }
+
+    endpoint.url = trimString(url);
+    endpoint.result = getIdleResult(endpoint);
+    saveSettings();
+    renderStatusRow(endpoint, getEndpointIndex(id));
+    renderEditorRow(endpoint, getEndpointIndex(id));
+
+    if (shouldRunChecks) {
+      runChecks();
+    }
+  }
+
+  function updateEndpointEnabled(id, enabled) {
+    var endpoint = getEndpointById(id);
+
+    if (!endpoint) {
+      return;
+    }
+
+    endpoint.enabled = enabled;
+    endpoint.result = getIdleResult(endpoint);
+    saveSettings();
+    renderStatusRow(endpoint, getEndpointIndex(id));
+    renderEditorRow(endpoint, getEndpointIndex(id));
+    runChecks();
   }
 
   function getEndpointById(id) {
@@ -313,17 +604,184 @@
     return null;
   }
 
+  function getEndpointIndex(id) {
+    var i;
+
+    for (i = 0; i < state.endpoints.length; i += 1) {
+      if (state.endpoints[i].id === id) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  function getDisplayName(endpoint, index) {
+    var label = trimString(endpoint.label);
+
+    if (label) {
+      return label;
+    }
+
+    return 'Endpoint ' + (index + 1);
+  }
+
   function getActiveEndpoints() {
     var active = [];
     var i;
 
     for (i = 0; i < state.endpoints.length; i += 1) {
-      if (state.endpoints[i].enabled) {
+      if (state.endpoints[i].enabled && state.endpoints[i].url) {
         active.push(state.endpoints[i]);
       }
     }
 
     return active;
+  }
+
+  function syncControls() {
+    elements.intervalSelect.value = String(state.interval);
+    elements.toggleAutoButton.textContent = state.autoRefresh ? 'Auto: On' : 'Auto: Off';
+    elements.toggleDetailsButton.textContent = state.showDetails ? 'Details: On' : 'Details: Off';
+    elements.refreshState.textContent = state.autoRefresh ? Math.round(state.interval / 1000) + 's' : 'Paused';
+    elements.endpointCount.textContent = state.endpoints.length + ' configured';
+    elements.controlsSubtitle.textContent = state.endpoints.length + ' of ' + MAX_ENDPOINTS + ' endpoint slots used';
+    elements.addEndpointButton.disabled = state.endpoints.length >= MAX_ENDPOINTS;
+  }
+
+  function render() {
+    renderMeta();
+    renderPanelVisibility();
+    renderEndpoints();
+  }
+
+  function renderPanelVisibility() {
+    if (state.showDetails) {
+      elements.app.classList.remove('details-hidden');
+    } else {
+      elements.app.classList.add('details-hidden');
+    }
+
+    if (state.controlsVisible) {
+      elements.controlsModal.className = 'controls-modal active';
+      elements.controlsHint.style.opacity = '0';
+    } else {
+      elements.controlsModal.className = 'controls-modal';
+      elements.controlsHint.style.opacity = '1';
+    }
+  }
+
+  function renderMeta() {
+    elements.lastChecked.textContent = state.lastCheckedAt ? formatClock(state.lastCheckedAt) : '--:--:--';
+    elements.uptimeValue.textContent = formatStableTime();
+    elements.refreshState.textContent = state.autoRefresh ? Math.round(state.interval / 1000) + 's' : 'Paused';
+  }
+
+  function renderEndpoints() {
+    var i;
+
+    elements.endpointCount.textContent = state.endpoints.length + ' configured';
+
+    for (i = 0; i < state.endpoints.length; i += 1) {
+      renderStatusRow(state.endpoints[i], i);
+      renderEditorRow(state.endpoints[i], i);
+    }
+  }
+
+  function renderStatusRow(endpoint, index) {
+    var rowParts = state.statusRows[endpoint.id];
+    var result = endpoint.result || getIdleResult(endpoint);
+    var stateText = result.statusLabel;
+    var stateClass = getStateClass(result);
+    var checkedText = 'Last: --:--:--';
+    var latencyText = '--';
+
+    if (!rowParts) {
+      return;
+    }
+
+    rowParts.nameMain.textContent = getDisplayName(endpoint, index);
+    rowParts.nameSub.textContent = endpoint.url ? endpoint.url : 'No URL configured';
+
+    if (!endpoint.enabled) {
+      stateText = 'OFF';
+      stateClass = 'muted-text';
+      checkedText = 'Disabled';
+    } else if (!endpoint.url) {
+      stateText = 'NO URL';
+      stateClass = 'warn-text';
+      checkedText = 'Waiting for configuration';
+    } else {
+      if (result.latency !== null && typeof result.latency !== 'undefined') {
+        latencyText = result.latency + ' ms';
+      }
+
+      if (result.checkedAt) {
+        checkedText = 'Last: ' + formatClock(result.checkedAt);
+      }
+
+      if (result.ok === false && result.error) {
+        checkedText = checkedText + '  ' + result.error;
+      }
+    }
+
+    rowParts.state.textContent = stateText;
+    rowParts.state.className = 'endpoint-state ' + stateClass;
+    rowParts.latency.textContent = latencyText;
+    rowParts.latency.className = 'endpoint-latency ' + getLatencyClass(result.latency);
+    rowParts.checked.textContent = checkedText;
+    rowParts.checked.className = endpoint.enabled && endpoint.url ? 'endpoint-checked' : 'endpoint-checked muted-text';
+  }
+
+  function renderEditorRow(endpoint, index) {
+    var rowParts = state.editorRows[endpoint.id];
+
+    if (!rowParts) {
+      return;
+    }
+
+    rowParts.editorIndex.textContent = 'Endpoint ' + (index + 1);
+    rowParts.checkbox.checked = endpoint.enabled;
+
+    if (document.activeElement !== rowParts.nameInput) {
+      rowParts.nameInput.value = endpoint.label;
+    }
+
+    if (document.activeElement !== rowParts.urlInput) {
+      rowParts.urlInput.value = endpoint.url;
+    }
+  }
+
+  function getStateClass(result) {
+    if (result.ok === true) {
+      return 'ok-text';
+    }
+
+    if (result.ok === false) {
+      return 'fail-text';
+    }
+
+    if (result.statusLabel === 'NO URL') {
+      return 'warn-text';
+    }
+
+    return 'muted-text';
+  }
+
+  function getLatencyClass(latency) {
+    if (latency === null || typeof latency === 'undefined') {
+      return 'muted-text';
+    }
+
+    if (latency < 150) {
+      return 'latency-good';
+    }
+
+    if (latency < 400) {
+      return 'latency-medium';
+    }
+
+    return 'latency-slow';
   }
 
   function runChecks() {
@@ -340,6 +798,15 @@
     var activeEndpoints = getActiveEndpoints();
     var tasks = [];
     var i;
+
+    if (!activeEndpoints.length) {
+      state.lastCheckedAt = Date.now();
+      state.stableSince = null;
+      updateOverallStatus(0, 0, 0);
+      render();
+      finishRun();
+      return;
+    }
 
     for (i = 0; i < activeEndpoints.length; i += 1) {
       tasks.push(checkEndpoint(activeEndpoints[i]));
@@ -426,24 +893,26 @@
         ok = false;
       }
 
-      return {
-        id: endpoint.id,
-        ok: ok,
-        statusLabel: ok ? 'OK' : 'FAIL',
-        latency: latency,
-        checkedAt: Date.now(),
-        error: ok ? '' : 'HTTP error'
-      };
+      return createEndpointResult(endpoint.id, ok, latency, ok ? '' : 'HTTP error');
     }, function (error) {
-      return {
-        id: endpoint.id,
-        ok: false,
-        statusLabel: 'FAIL',
-        latency: null,
-        checkedAt: Date.now(),
-        error: error && error.message ? error.message : 'Network error'
-      };
+      return createEndpointResult(
+        endpoint.id,
+        false,
+        null,
+        error && error.message ? error.message : 'Network error'
+      );
     });
+  }
+
+  function createEndpointResult(id, ok, latency, error) {
+    return {
+      id: id,
+      ok: ok,
+      statusLabel: ok ? 'OK' : 'FAIL',
+      latency: latency,
+      checkedAt: Date.now(),
+      error: error
+    };
   }
 
   function fetchWithTimeout(url, timeoutMs) {
@@ -498,15 +967,15 @@
 
     if (totalCount === 0) {
       statusText = 'OFFLINE';
-      summaryText = 'No active endpoints configured';
+      summaryText = 'No enabled endpoints configured';
       className = 'overall-status status-offline';
     } else if (okCount === totalCount) {
       statusText = 'ONLINE';
-      summaryText = totalCount + ' of ' + totalCount + ' endpoints reachable';
+      summaryText = okCount + ' of ' + totalCount + ' active endpoints reachable';
       className = 'overall-status status-online';
     } else if (okCount === 0) {
       statusText = 'OFFLINE';
-      summaryText = failedCount + ' of ' + totalCount + ' endpoints failed';
+      summaryText = failedCount + ' of ' + totalCount + ' active endpoints failed';
       className = 'overall-status status-offline';
     } else {
       statusText = 'DEGRADED';
@@ -519,99 +988,13 @@
     elements.statusSummary.textContent = summaryText;
   }
 
-  function render() {
-    renderMeta();
-    renderEndpoints();
-    renderPanelVisibility();
-  }
-
-  function renderPanelVisibility() {
-    var showDetailsPanel = state.showDetails && !state.controlsVisible;
-
-    if (showDetailsPanel) {
-      elements.app.classList.remove('details-hidden');
-    } else {
-      elements.app.classList.add('details-hidden');
-    }
-
-    if (state.controlsVisible) {
-      elements.app.classList.remove('controls-hidden');
-      elements.controlsHint.style.opacity = '0';
-    } else {
-      elements.app.classList.add('controls-hidden');
-      elements.controlsHint.style.opacity = '1';
-    }
-  }
-
-  function renderMeta() {
-    elements.lastChecked.textContent = state.lastCheckedAt ? formatClock(state.lastCheckedAt) : '--:--:--';
-    elements.uptimeValue.textContent = formatStableTime();
-    elements.refreshState.textContent = state.autoRefresh ? Math.round(state.interval / 1000) + 's' : 'Paused';
-  }
-
-  function renderEndpoints() {
-    var i;
-
-    for (i = 0; i < state.endpoints.length; i += 1) {
-      renderEndpointRow(state.endpoints[i]);
-    }
-  }
-
-  function renderEndpointRow(endpoint) {
-    var rowParts = state.rows[endpoint.id];
-    var result = endpoint.result;
-
-    if (!rowParts) {
-      return;
-    }
-
-    rowParts.name.textContent = endpoint.label;
-
-    if (!endpoint.enabled) {
-      rowParts.row.style.display = 'none';
-      return;
-    }
-
-    rowParts.row.style.display = '';
-    rowParts.state.textContent = result.statusLabel;
-    rowParts.state.className = 'endpoint-state ' + getStateClass(result);
-    rowParts.latency.textContent = result.latency !== null ? result.latency + ' ms' : '--';
-    rowParts.latency.className = 'endpoint-latency ' + getLatencyClass(result.latency);
-    rowParts.checked.textContent = result.checkedAt ? 'Last: ' + formatClock(result.checkedAt) : 'Last: --:--:--';
-    rowParts.checked.className = result.error ? 'endpoint-checked muted-text' : 'endpoint-checked';
-  }
-
-  function getStateClass(result) {
-    if (result.ok === true) {
-      return 'ok-text';
-    }
-
-    if (result.ok === false) {
-      return 'fail-text';
-    }
-
-    return 'muted-text';
-  }
-
-  function getLatencyClass(latency) {
-    if (latency === null || typeof latency === 'undefined') {
-      return 'muted-text';
-    }
-
-    if (latency < 150) {
-      return 'latency-good';
-    }
-
-    if (latency < 400) {
-      return 'latency-medium';
-    }
-
-    return 'latency-slow';
-  }
-
   function formatStableTime() {
     if (!state.lastCheckedAt) {
       return '--:--:--';
+    }
+
+    if (!getActiveEndpoints().length) {
+      return 'NO TARGET';
     }
 
     if (!state.stableSince) {
@@ -646,8 +1029,13 @@
 
   function addCacheBuster(url) {
     var separator = url.indexOf('?') === -1 ? '?' : '&';
-
     return url + separator + '_ts=' + Date.now();
+  }
+
+  function clearChildren(node) {
+    while (node.firstChild) {
+      node.removeChild(node.firstChild);
+    }
   }
 
   window.setInterval(function () {
