@@ -4,11 +4,16 @@
   var CONTROL_TIMEOUT = 10000;
   var CHECK_TIMEOUT = 8000;
   var MAX_ENDPOINTS = 10;
+  var MAX_INCIDENTS = 200;
+  var SLOW_RESPONSE_MS = 400;
 
   var state = {
     autoRefresh: true,
     interval: DEFAULT_INTERVAL,
     showDetails: true,
+    activeDetailsTab: 'endpoints',
+    incidentFilter: 'all',
+    incidentEndpointFilter: 'all',
     isChecking: false,
     pendingRefresh: false,
     controlsVisible: false,
@@ -17,6 +22,7 @@
     lastCheckedAt: null,
     stableSince: null,
     endpoints: [],
+    incidents: [],
     statusRows: {},
     editorRows: {}
   };
@@ -41,9 +47,22 @@
     elements.lastChecked = document.getElementById('lastChecked');
     elements.refreshState = document.getElementById('refreshState');
     elements.uptimeValue = document.getElementById('uptimeValue');
+    elements.incidentSummaryButton = document.getElementById('incidentSummaryButton');
+    elements.incidentCountValue = document.getElementById('incidentCountValue');
     elements.detailsPanel = document.getElementById('detailsPanel');
-    elements.endpointCount = document.getElementById('endpointCount');
+    elements.detailsHeader = document.getElementById('detailsHeader');
+    elements.detailsCount = document.getElementById('detailsCount');
+    elements.showEndpointsTabButton = document.getElementById('showEndpointsTabButton');
+    elements.showIncidentsTabButton = document.getElementById('showIncidentsTabButton');
+    elements.endpointScroll = document.getElementById('endpointScroll');
     elements.endpointList = document.getElementById('endpointList');
+    elements.incidentPanel = document.getElementById('incidentPanel');
+    elements.incidentScroll = document.getElementById('incidentScroll');
+    elements.incidentList = document.getElementById('incidentList');
+    elements.filterAllButton = document.getElementById('filterAllButton');
+    elements.filterFailButton = document.getElementById('filterFailButton');
+    elements.filterSlowButton = document.getElementById('filterSlowButton');
+    elements.incidentEndpointFilter = document.getElementById('incidentEndpointFilter');
     elements.controlsHint = document.getElementById('controlsHint');
     elements.controlsModal = document.getElementById('controlsModal');
     elements.controlsBackdrop = document.getElementById('controlsBackdrop');
@@ -53,6 +72,7 @@
     elements.refreshNowButton = document.getElementById('refreshNowButton');
     elements.toggleAutoButton = document.getElementById('toggleAutoButton');
     elements.toggleDetailsButton = document.getElementById('toggleDetailsButton');
+    elements.showHistoryButton = document.getElementById('showHistoryButton');
     elements.intervalSelect = document.getElementById('intervalSelect');
     elements.addEndpointButton = document.getElementById('addEndpointButton');
     elements.endpointEditorList = document.getElementById('endpointEditorList');
@@ -88,8 +108,24 @@
       state.showDetails = saved.showDetails;
     }
 
+    if (saved.activeDetailsTab === 'incidents' || saved.activeDetailsTab === 'endpoints') {
+      state.activeDetailsTab = saved.activeDetailsTab;
+    }
+
+    if (saved.incidentFilter === 'all' || saved.incidentFilter === 'fail' || saved.incidentFilter === 'slow') {
+      state.incidentFilter = saved.incidentFilter;
+    }
+
+    if (typeof saved.incidentEndpointFilter === 'string') {
+      state.incidentEndpointFilter = saved.incidentEndpointFilter;
+    }
+
     if (saved.endpoints && Object.prototype.toString.call(saved.endpoints) === '[object Array]') {
       state.endpoints = normalizeSavedEndpoints(saved.endpoints);
+    }
+
+    if (saved.incidents && Object.prototype.toString.call(saved.incidents) === '[object Array]') {
+      state.incidents = normalizeSavedIncidents(saved.incidents);
     }
   }
 
@@ -98,7 +134,11 @@
       autoRefresh: state.autoRefresh,
       interval: state.interval,
       showDetails: state.showDetails,
-      endpoints: serializeEndpoints()
+      activeDetailsTab: state.activeDetailsTab,
+      incidentFilter: state.incidentFilter,
+      incidentEndpointFilter: state.incidentEndpointFilter,
+      endpoints: serializeEndpoints(),
+      incidents: serializeIncidents()
     };
 
     try {
@@ -178,8 +218,60 @@
     return serialized;
   }
 
+  function normalizeSavedIncidents(savedIncidents) {
+    var normalized = [];
+    var i;
+
+    for (i = 0; i < savedIncidents.length && normalized.length < MAX_INCIDENTS; i += 1) {
+      if (!savedIncidents[i] || typeof savedIncidents[i] !== 'object') {
+        continue;
+      }
+
+      if (savedIncidents[i].type !== 'fail' && savedIncidents[i].type !== 'slow') {
+        continue;
+      }
+
+      normalized.push({
+        id: savedIncidents[i].id ? String(savedIncidents[i].id) : generateIncidentId(),
+        endpointId: savedIncidents[i].endpointId ? String(savedIncidents[i].endpointId) : '',
+        endpointName: savedIncidents[i].endpointName ? String(savedIncidents[i].endpointName) : 'Unknown endpoint',
+        endpointUrl: savedIncidents[i].endpointUrl ? String(savedIncidents[i].endpointUrl) : '',
+        type: savedIncidents[i].type,
+        latency: typeof savedIncidents[i].latency === 'number' ? savedIncidents[i].latency : null,
+        error: savedIncidents[i].error ? String(savedIncidents[i].error) : '',
+        checkedAt: typeof savedIncidents[i].checkedAt === 'number' ? savedIncidents[i].checkedAt : Date.now()
+      });
+    }
+
+    return normalized;
+  }
+
+  function serializeIncidents() {
+    var serialized = [];
+    var i;
+
+    for (i = 0; i < state.incidents.length; i += 1) {
+      serialized.push({
+        id: state.incidents[i].id,
+        endpointId: state.incidents[i].endpointId,
+        endpointName: state.incidents[i].endpointName,
+        endpointUrl: state.incidents[i].endpointUrl,
+        type: state.incidents[i].type,
+        latency: state.incidents[i].latency,
+        error: state.incidents[i].error,
+        checkedAt: state.incidents[i].checkedAt
+      });
+    }
+
+    return serialized;
+  }
+
   function generateEndpointId() {
     return 'endpoint-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+  }
+
+  function generateIncidentId() {
+    return 'incident-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
   }
 
   function getIdleResult(endpoint) {
@@ -454,6 +546,55 @@
       resetControlsTimer();
     });
 
+    elements.showHistoryButton.addEventListener('click', function () {
+      state.showDetails = true;
+      showIncidentsTab();
+      syncControls();
+      renderPanelVisibility();
+      hideControls();
+    });
+
+    elements.incidentSummaryButton.addEventListener('click', function () {
+      state.showDetails = true;
+      showIncidentsTab();
+      syncControls();
+      renderPanelVisibility();
+    });
+
+    elements.showEndpointsTabButton.addEventListener('click', function (event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      showEndpointsTab();
+    });
+
+    elements.showIncidentsTabButton.addEventListener('click', function (event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      showIncidentsTab();
+    });
+
+    elements.filterAllButton.addEventListener('click', function () {
+      setIncidentFilter('all');
+    });
+
+    elements.filterFailButton.addEventListener('click', function () {
+      setIncidentFilter('fail');
+    });
+
+    elements.filterSlowButton.addEventListener('click', function () {
+      setIncidentFilter('slow');
+    });
+
+    elements.incidentEndpointFilter.addEventListener('change', function () {
+      state.incidentEndpointFilter = elements.incidentEndpointFilter.value;
+      saveSettings();
+      renderIncidents();
+    });
+
     elements.intervalSelect.addEventListener('change', function () {
       state.interval = parseInt(elements.intervalSelect.value, 10) || DEFAULT_INTERVAL;
       saveSettings();
@@ -644,15 +785,16 @@
     elements.toggleAutoButton.textContent = state.autoRefresh ? 'Auto: On' : 'Auto: Off';
     elements.toggleDetailsButton.textContent = state.showDetails ? 'Details: On' : 'Details: Off';
     elements.refreshState.textContent = state.autoRefresh ? Math.round(state.interval / 1000) + 's' : 'Paused';
-    elements.endpointCount.textContent = state.endpoints.length + ' configured';
     elements.controlsSubtitle.textContent = state.endpoints.length + ' of ' + MAX_ENDPOINTS + ' endpoint slots used';
     elements.addEndpointButton.disabled = state.endpoints.length >= MAX_ENDPOINTS;
+    syncIncidentEndpointFilter();
   }
 
   function render() {
     renderMeta();
     renderPanelVisibility();
     renderEndpoints();
+    renderIncidents();
   }
 
   function renderPanelVisibility() {
@@ -669,18 +811,36 @@
       elements.controlsModal.className = 'controls-modal';
       elements.controlsHint.style.opacity = '1';
     }
+
+    if (state.activeDetailsTab === 'incidents') {
+      elements.detailsPanel.classList.add('show-incidents');
+      elements.showEndpointsTabButton.className = 'details-tab-button';
+      elements.showEndpointsTabButton.setAttribute('aria-selected', 'false');
+      elements.showIncidentsTabButton.className = 'details-tab-button active';
+      elements.showIncidentsTabButton.setAttribute('aria-selected', 'true');
+    } else {
+      elements.detailsPanel.classList.remove('show-incidents');
+      elements.showEndpointsTabButton.className = 'details-tab-button active';
+      elements.showEndpointsTabButton.setAttribute('aria-selected', 'true');
+      elements.showIncidentsTabButton.className = 'details-tab-button';
+      elements.showIncidentsTabButton.setAttribute('aria-selected', 'false');
+    }
   }
 
   function renderMeta() {
     elements.lastChecked.textContent = state.lastCheckedAt ? formatClock(state.lastCheckedAt) : '--:--:--';
     elements.uptimeValue.textContent = formatStableTime();
     elements.refreshState.textContent = state.autoRefresh ? Math.round(state.interval / 1000) + 's' : 'Paused';
+    elements.incidentCountValue.textContent = state.incidents.length + ' / ' + MAX_INCIDENTS;
   }
 
   function renderEndpoints() {
     var i;
 
-    elements.endpointCount.textContent = state.endpoints.length + ' configured';
+    if (state.activeDetailsTab === 'endpoints') {
+      elements.detailsHeader.textContent = 'ENDPOINT STATUS';
+      elements.detailsCount.textContent = state.endpoints.length + ' configured';
+    }
 
     for (i = 0; i < state.endpoints.length; i += 1) {
       renderStatusRow(state.endpoints[i], i);
@@ -777,11 +937,15 @@
       return 'latency-good';
     }
 
-    if (latency < 400) {
+    if (latency < SLOW_RESPONSE_MS) {
       return 'latency-medium';
     }
 
     return 'latency-slow';
+  }
+
+  function isSlowResult(result) {
+    return result && typeof result.latency === 'number' && result.latency >= SLOW_RESPONSE_MS;
   }
 
   function runChecks() {
@@ -820,6 +984,7 @@
 
       for (j = 0; j < results.length; j += 1) {
         updateEndpointResult(results[j].id, results[j]);
+        recordIncidentForResult(results[j]);
 
         if (results[j].ok) {
           okCount += 1;
@@ -960,6 +1125,224 @@
     endpoint.result = result;
   }
 
+  function recordIncidentForResult(result) {
+    var endpoint = getEndpointById(result.id);
+    var incidentType = '';
+    var incident;
+
+    if (!endpoint) {
+      return;
+    }
+
+    if (result.ok === false) {
+      incidentType = 'fail';
+    } else if (isSlowResult(result)) {
+      incidentType = 'slow';
+    }
+
+    if (!incidentType) {
+      return;
+    }
+
+    incident = {
+      id: generateIncidentId(),
+      endpointId: endpoint.id,
+      endpointName: getDisplayName(endpoint, getEndpointIndex(endpoint.id)),
+      endpointUrl: endpoint.url,
+      type: incidentType,
+      latency: result.latency,
+      error: result.error || '',
+      checkedAt: result.checkedAt || Date.now()
+    };
+
+    state.incidents.unshift(incident);
+
+    if (state.incidents.length > MAX_INCIDENTS) {
+      state.incidents.length = MAX_INCIDENTS;
+    }
+
+    saveSettings();
+  }
+
+  function showEndpointsTab() {
+    state.activeDetailsTab = 'endpoints';
+    saveSettings();
+    renderPanelVisibility();
+    renderEndpoints();
+  }
+
+  function showIncidentsTab() {
+    state.activeDetailsTab = 'incidents';
+    saveSettings();
+    renderPanelVisibility();
+    renderIncidents();
+  }
+
+  function setIncidentFilter(filter) {
+    state.incidentFilter = filter;
+    saveSettings();
+    renderIncidents();
+  }
+
+  function syncIncidentEndpointFilter() {
+    var currentValue = state.incidentEndpointFilter;
+    var seen = { all: true };
+    var options = [{
+      value: 'all',
+      label: 'All endpoints'
+    }];
+    var incidentOptionMap = {};
+    var i;
+
+    for (i = 0; i < state.endpoints.length; i += 1) {
+      if (seen[state.endpoints[i].id]) {
+        continue;
+      }
+
+      seen[state.endpoints[i].id] = true;
+      options.push({
+        value: state.endpoints[i].id,
+        label: getDisplayName(state.endpoints[i], i)
+      });
+    }
+
+    for (i = 0; i < state.incidents.length; i += 1) {
+      if (!state.incidents[i].endpointId || seen[state.incidents[i].endpointId]) {
+        continue;
+      }
+
+      if (!incidentOptionMap[state.incidents[i].endpointId]) {
+        incidentOptionMap[state.incidents[i].endpointId] = state.incidents[i].endpointName || 'Unknown endpoint';
+      }
+    }
+
+    for (var endpointId in incidentOptionMap) {
+      if (Object.prototype.hasOwnProperty.call(incidentOptionMap, endpointId)) {
+        seen[endpointId] = true;
+        options.push({
+          value: endpointId,
+          label: incidentOptionMap[endpointId]
+        });
+      }
+    }
+
+    clearChildren(elements.incidentEndpointFilter);
+
+    for (i = 0; i < options.length; i += 1) {
+      var option = document.createElement('option');
+      option.value = options[i].value;
+      option.textContent = options[i].label;
+      elements.incidentEndpointFilter.appendChild(option);
+    }
+
+    if (!seen[currentValue]) {
+      state.incidentEndpointFilter = 'all';
+    }
+
+    elements.incidentEndpointFilter.value = state.incidentEndpointFilter;
+  }
+
+  function getFilteredIncidents() {
+    var filtered = [];
+    var i;
+
+    for (i = 0; i < state.incidents.length; i += 1) {
+      if (state.incidentFilter !== 'all' && state.incidents[i].type !== state.incidentFilter) {
+        continue;
+      }
+
+      if (state.incidentEndpointFilter !== 'all' && state.incidents[i].endpointId !== state.incidentEndpointFilter) {
+        continue;
+      }
+
+      filtered.push(state.incidents[i]);
+    }
+
+    return filtered;
+  }
+
+  function renderIncidents() {
+    var incidents = getFilteredIncidents();
+    var fragment = document.createDocumentFragment();
+    var emptyState;
+    var i;
+
+    if (state.activeDetailsTab === 'incidents') {
+      elements.detailsHeader.textContent = 'INCIDENT HISTORY';
+      elements.detailsCount.textContent = incidents.length + ' shown of ' + state.incidents.length;
+    }
+
+    elements.filterAllButton.className = state.incidentFilter === 'all' ? 'incident-filter-button active' : 'incident-filter-button';
+    elements.filterFailButton.className = state.incidentFilter === 'fail' ? 'incident-filter-button active' : 'incident-filter-button';
+    elements.filterSlowButton.className = state.incidentFilter === 'slow' ? 'incident-filter-button active' : 'incident-filter-button';
+    syncIncidentEndpointFilter();
+    clearChildren(elements.incidentList);
+
+    if (!incidents.length) {
+      emptyState = document.createElement('div');
+      emptyState.className = 'incident-empty-state';
+      emptyState.textContent = 'No incidents match the current filters.';
+      elements.incidentList.appendChild(emptyState);
+      return;
+    }
+
+    for (i = 0; i < incidents.length; i += 1) {
+      fragment.appendChild(buildIncidentRow(incidents[i]));
+    }
+
+    elements.incidentList.appendChild(fragment);
+  }
+
+  function buildIncidentRow(incident) {
+    var row = document.createElement('div');
+    var top = document.createElement('div');
+    var name = document.createElement('div');
+    var time = document.createElement('div');
+    var bottom = document.createElement('div');
+    var type = document.createElement('div');
+    var latency = document.createElement('div');
+    var reason = document.createElement('div');
+
+    row.className = 'incident-row';
+    top.className = 'incident-row-top';
+    name.className = 'incident-name';
+    time.className = 'incident-time';
+    bottom.className = 'incident-row-bottom';
+    type.className = incident.type === 'fail' ? 'incident-type fail-text' : 'incident-type latency-slow';
+    latency.className = 'incident-latency ' + getLatencyClass(incident.latency);
+    reason.className = 'incident-reason';
+
+    name.textContent = incident.endpointName;
+    time.textContent = formatDateTime(incident.checkedAt);
+    type.textContent = incident.type === 'fail' ? 'FAIL' : 'SLOW';
+    latency.textContent = incident.latency !== null && typeof incident.latency !== 'undefined'
+      ? incident.latency + ' ms'
+      : '--';
+    reason.textContent = getIncidentReason(incident);
+
+    top.appendChild(name);
+    top.appendChild(time);
+    bottom.appendChild(type);
+    bottom.appendChild(latency);
+    bottom.appendChild(reason);
+    row.appendChild(top);
+    row.appendChild(bottom);
+
+    return row;
+  }
+
+  function getIncidentReason(incident) {
+    if (incident.type === 'fail') {
+      return incident.error || 'Request failed';
+    }
+
+    if (incident.error) {
+      return incident.error;
+    }
+
+    return 'Exceeded slow threshold (' + SLOW_RESPONSE_MS + ' ms)';
+  }
+
   function updateOverallStatus(okCount, failedCount, totalCount) {
     var statusText = 'CHECKING...';
     var summaryText = 'Waiting for endpoint data';
@@ -1008,6 +1391,15 @@
     var date = new Date(timestamp);
 
     return padNumber(date.getHours()) + ':' + padNumber(date.getMinutes()) + ':' + padNumber(date.getSeconds());
+  }
+
+  function formatDateTime(timestamp) {
+    var date = new Date(timestamp);
+    return (
+      (date.getMonth() + 1) + '/' +
+      date.getDate() + ' ' +
+      formatClock(timestamp)
+    );
   }
 
   function formatDuration(ms) {

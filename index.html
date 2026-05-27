@@ -28,16 +28,42 @@
             <div class="meta-label">STABLE FOR</div>
             <div id="uptimeValue" class="meta-value">--:--:--</div>
           </div>
+          <button id="incidentSummaryButton" class="meta-card meta-card-button" type="button">
+            <div class="meta-label">RECENT INCIDENTS</div>
+            <div id="incidentCountValue" class="meta-value">0 / 200</div>
+          </button>
         </div>
       </div>
 
       <div id="detailsPanel" class="details-panel">
         <div class="details-header-row">
-          <div class="details-header">ENDPOINT STATUS</div>
-          <div id="endpointCount" class="details-count">0 configured</div>
+          <div class="details-title-group">
+            <div id="detailsHeader" class="details-header">ENDPOINT STATUS</div>
+            <div id="detailsCount" class="details-count">0 configured</div>
+          </div>
+          <div class="details-tabs" role="tablist" aria-label="Details view">
+            <button id="showEndpointsTabButton" class="details-tab-button active" type="button" role="tab" aria-selected="true">Endpoints</button>
+            <button id="showIncidentsTabButton" class="details-tab-button" type="button" role="tab" aria-selected="false">Incidents</button>
+          </div>
         </div>
         <div id="endpointScroll" class="endpoint-scroll">
           <div id="endpointList" class="endpoint-list"></div>
+        </div>
+        <div id="incidentPanel" class="incident-panel">
+          <div class="incident-filters">
+            <button id="filterAllButton" class="incident-filter-button active" type="button">All</button>
+            <button id="filterFailButton" class="incident-filter-button" type="button">Fails</button>
+            <button id="filterSlowButton" class="incident-filter-button" type="button">Slow</button>
+            <label class="control-field control-field-inline incident-filter-select">
+              <span>Endpoint</span>
+              <select id="incidentEndpointFilter" class="control-select">
+                <option value="all">All endpoints</option>
+              </select>
+            </label>
+          </div>
+          <div id="incidentScroll" class="incident-scroll">
+            <div id="incidentList" class="incident-list"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -65,6 +91,7 @@
           <button id="refreshNowButton" class="control-button" type="button">Refresh Now</button>
           <button id="toggleAutoButton" class="control-button" type="button">Auto: On</button>
           <button id="toggleDetailsButton" class="control-button" type="button">Details: On</button>
+          <button id="showHistoryButton" class="control-button" type="button">History</button>
           <label class="control-field control-field-inline">
             <span>Refresh Interval</span>
             <select id="intervalSelect" class="control-select">

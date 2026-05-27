@@ -149,8 +149,8 @@ body {
   margin-top: 3vh;
   display: -ms-grid;
   display: grid;
-  -ms-grid-columns: 1fr 2vw 1fr 2vw 1fr;
-  grid-template-columns: repeat(3, 1fr);
+  -ms-grid-columns: 1fr 2vw 1fr 2vw 1fr 2vw 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 2vw;
 }
 
@@ -158,6 +158,17 @@ body {
   padding: 1.8vh 1vw;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 14px;
+}
+
+.meta-card-button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.meta-card-button:active {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .meta-label {
@@ -184,14 +195,51 @@ body {
   margin-bottom: 1.2vh;
 }
 
+.details-title-group {
+  min-width: 0;
+}
+
 .details-header,
 .details-count {
   font-size: 14px;
   color: var(--muted);
 }
 
+.details-count {
+  margin-top: 0.5vh;
+}
+
+.details-tabs {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-wrap: wrap;
+      flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.details-tab-button,
+.incident-filter-button {
+  min-height: 42px;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #dbe2e8;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.details-tab-button.active,
+.incident-filter-button.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
 .endpoint-scroll,
-.endpoint-editor-scroll {
+.endpoint-editor-scroll,
+.incident-scroll {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -207,6 +255,120 @@ body {
 
 .endpoint-list {
   display: block;
+}
+
+.incident-panel {
+  display: none;
+  -webkit-box-flex: 1;
+      -ms-flex: 1 1 auto;
+          flex: 1 1 auto;
+  min-height: 0;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+
+.details-panel.show-incidents .endpoint-scroll {
+  display: none;
+}
+
+.details-panel.show-incidents .incident-panel {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+.incident-filters {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-wrap: wrap;
+      flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 1.2vh;
+}
+
+.incident-filter-select {
+  min-width: 220px;
+}
+
+.incident-scroll {
+  -webkit-box-flex: 1;
+      -ms-flex: 1 1 auto;
+          flex: 1 1 auto;
+  padding-right: 0.4rem;
+}
+
+.incident-list {
+  display: block;
+}
+
+.incident-row {
+  margin-top: 1.1vh;
+  padding: 1.2vh 1.3vw;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 12px;
+}
+
+.incident-row:first-child {
+  margin-top: 0;
+}
+
+.incident-row-top,
+.incident-row-bottom {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  gap: 1rem;
+}
+
+.incident-row-bottom {
+  margin-top: 0.7vh;
+}
+
+.incident-name {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.incident-time,
+.incident-reason {
+  color: var(--muted);
+}
+
+.incident-time {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.incident-type,
+.incident-latency {
+  min-width: 84px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.incident-reason {
+  -webkit-box-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  text-align: right;
+  font-size: 16px;
+}
+
+.incident-empty-state {
+  padding: 2rem 1rem;
+  color: var(--muted);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
 }
 
 .endpoint-row {
@@ -675,7 +837,10 @@ body {
   .editor-row-header,
   .editor-fields,
   .controls-row,
-  .controls-header {
+  .controls-header,
+  .incident-row-top,
+  .incident-row-bottom,
+  .incident-filters {
     -webkit-box-orient: vertical;
     -webkit-box-direction: normal;
         -ms-flex-direction: column;
@@ -686,7 +851,8 @@ body {
   }
 
   .details-count,
-  .controls-subtitle {
+  .controls-subtitle,
+  .details-tabs {
     margin-top: 0.6vh;
   }
 
@@ -698,7 +864,11 @@ body {
   .endpoint-name,
   .endpoint-state,
   .endpoint-latency,
-  .endpoint-checked {
+  .endpoint-checked,
+  .incident-type,
+  .incident-latency,
+  .incident-reason,
+  .incident-time {
     width: auto;
     min-width: 0;
     margin-right: 0;
@@ -707,13 +877,15 @@ body {
 
   .endpoint-state,
   .endpoint-latency,
-  .endpoint-checked {
+  .endpoint-checked,
+  .incident-row-bottom {
     margin-top: 0.7vh;
     font-size: 18px;
   }
 
   .controls-row > *,
-  .editor-field {
+  .editor-field,
+  .incident-filter-select {
     width: 100%;
     margin-right: 0;
     margin-bottom: 1vh;
@@ -756,6 +928,11 @@ body {
   .app-credit {
     margin-top: 0.6vh;
     text-align: left;
+  }
+
+  .details-tab-button,
+  .incident-filter-button {
+    width: 100%;
   }
 }
 
