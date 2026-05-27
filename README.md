@@ -2,6 +2,8 @@
 
 A simple static dashboard that shows internet and endpoint health in a fullscreen heads-up display. It is designed for always-on wall tablets, older iPads, and kiosk-style monitoring screens.
 
+Created by [Chet Rogers](https://github.com/rogersac/netze).
+
 ## Features
 
 - Fullscreen, no-scroll layout with large, room-readable typography
