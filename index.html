@@ -56,9 +56,14 @@
         </div>
         <div id="incidentPanel" class="incident-panel">
           <div class="incident-filters">
-            <button id="filterAllButton" class="incident-filter-button active" type="button">All</button>
-            <button id="filterFailButton" class="incident-filter-button" type="button">Fails</button>
-            <button id="filterSlowButton" class="incident-filter-button" type="button">Slow</button>
+            <label class="incident-filter-toggle">
+              <input id="filterFailCheckbox" class="incident-filter-checkbox" type="checkbox" checked>
+              <span>Failed</span>
+            </label>
+            <label class="incident-filter-toggle">
+              <input id="filterSlowCheckbox" class="incident-filter-checkbox" type="checkbox" checked>
+              <span>Slow</span>
+            </label>
             <label class="control-field control-field-inline incident-filter-select">
               <span>Endpoint</span>
               <select id="incidentEndpointFilter" class="control-select">

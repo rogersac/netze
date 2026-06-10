@@ -12,7 +12,10 @@
     interval: DEFAULT_INTERVAL,
     showDetails: true,
     activeDetailsTab: 'endpoints',
-    incidentFilter: 'all',
+    incidentFilters: {
+      fail: true,
+      slow: true
+    },
     incidentEndpointFilter: 'all',
     isChecking: false,
     pendingRefresh: false,
@@ -60,9 +63,8 @@
     elements.incidentPanel = document.getElementById('incidentPanel');
     elements.incidentScroll = document.getElementById('incidentScroll');
     elements.incidentList = document.getElementById('incidentList');
-    elements.filterAllButton = document.getElementById('filterAllButton');
-    elements.filterFailButton = document.getElementById('filterFailButton');
-    elements.filterSlowButton = document.getElementById('filterSlowButton');
+    elements.filterFailCheckbox = document.getElementById('filterFailCheckbox');
+    elements.filterSlowCheckbox = document.getElementById('filterSlowCheckbox');
     elements.incidentEndpointFilter = document.getElementById('incidentEndpointFilter');
     elements.controlsModal = document.getElementById('controlsModal');
     elements.controlsBackdrop = document.getElementById('controlsBackdrop');
@@ -112,8 +114,23 @@
       state.activeDetailsTab = saved.activeDetailsTab;
     }
 
-    if (saved.incidentFilter === 'all' || saved.incidentFilter === 'fail' || saved.incidentFilter === 'slow') {
-      state.incidentFilter = saved.incidentFilter;
+    if (saved.incidentFilters && typeof saved.incidentFilters === 'object') {
+      if (typeof saved.incidentFilters.fail === 'boolean') {
+        state.incidentFilters.fail = saved.incidentFilters.fail;
+      }
+
+      if (typeof saved.incidentFilters.slow === 'boolean') {
+        state.incidentFilters.slow = saved.incidentFilters.slow;
+      }
+    } else if (saved.incidentFilter === 'all') {
+      state.incidentFilters.fail = true;
+      state.incidentFilters.slow = true;
+    } else if (saved.incidentFilter === 'fail') {
+      state.incidentFilters.fail = true;
+      state.incidentFilters.slow = false;
+    } else if (saved.incidentFilter === 'slow') {
+      state.incidentFilters.fail = false;
+      state.incidentFilters.slow = true;
     }
 
     if (typeof saved.incidentEndpointFilter === 'string') {
@@ -135,7 +152,10 @@
       interval: state.interval,
       showDetails: state.showDetails,
       activeDetailsTab: state.activeDetailsTab,
-      incidentFilter: state.incidentFilter,
+      incidentFilters: {
+        fail: state.incidentFilters.fail,
+        slow: state.incidentFilters.slow
+      },
       incidentEndpointFilter: state.incidentEndpointFilter,
       endpoints: serializeEndpoints(),
       incidents: serializeIncidents()
@@ -571,16 +591,12 @@
       showIncidentsTab();
     });
 
-    elements.filterAllButton.addEventListener('click', function () {
-      setIncidentFilter('all');
+    elements.filterFailCheckbox.addEventListener('change', function () {
+      setIncidentFilter('fail', elements.filterFailCheckbox.checked);
     });
 
-    elements.filterFailButton.addEventListener('click', function () {
-      setIncidentFilter('fail');
-    });
-
-    elements.filterSlowButton.addEventListener('click', function () {
-      setIncidentFilter('slow');
+    elements.filterSlowCheckbox.addEventListener('change', function () {
+      setIncidentFilter('slow', elements.filterSlowCheckbox.checked);
     });
 
     elements.incidentEndpointFilter.addEventListener('change', function () {
@@ -1170,8 +1186,12 @@
     renderIncidents();
   }
 
-  function setIncidentFilter(filter) {
-    state.incidentFilter = filter;
+  function setIncidentFilter(filterType, checked) {
+    if (filterType !== 'fail' && filterType !== 'slow') {
+      return;
+    }
+
+    state.incidentFilters[filterType] = checked;
     saveSettings();
     renderIncidents();
   }
@@ -1239,7 +1259,11 @@
     var i;
 
     for (i = 0; i < state.incidents.length; i += 1) {
-      if (state.incidentFilter !== 'all' && state.incidents[i].type !== state.incidentFilter) {
+      if (state.incidents[i].type === 'fail' && !state.incidentFilters.fail) {
+        continue;
+      }
+
+      if (state.incidents[i].type === 'slow' && !state.incidentFilters.slow) {
         continue;
       }
 
@@ -1264,9 +1288,10 @@
       elements.detailsCount.textContent = incidents.length + ' shown of ' + state.incidents.length;
     }
 
-    elements.filterAllButton.className = state.incidentFilter === 'all' ? 'incident-filter-button active' : 'incident-filter-button';
-    elements.filterFailButton.className = state.incidentFilter === 'fail' ? 'incident-filter-button active' : 'incident-filter-button';
-    elements.filterSlowButton.className = state.incidentFilter === 'slow' ? 'incident-filter-button active' : 'incident-filter-button';
+    elements.filterFailCheckbox.checked = state.incidentFilters.fail;
+    elements.filterSlowCheckbox.checked = state.incidentFilters.slow;
+    elements.filterFailCheckbox.parentNode.className = state.incidentFilters.fail ? 'incident-filter-toggle active' : 'incident-filter-toggle';
+    elements.filterSlowCheckbox.parentNode.className = state.incidentFilters.slow ? 'incident-filter-toggle active' : 'incident-filter-toggle';
     syncIncidentEndpointFilter();
     clearChildren(elements.incidentList);
 
