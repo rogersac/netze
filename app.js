@@ -1252,6 +1252,29 @@
     }
 
     elements.incidentEndpointFilter.value = state.incidentEndpointFilter;
+    sizeIncidentEndpointFilter(options);
+  }
+
+  function sizeIncidentEndpointFilter(options) {
+    var measurement = document.createElement('span');
+    var computedStyle = window.getComputedStyle(elements.incidentEndpointFilter);
+    var maxWidth = 0;
+    var i;
+
+    measurement.style.position = 'absolute';
+    measurement.style.visibility = 'hidden';
+    measurement.style.whiteSpace = 'nowrap';
+    measurement.style.font = computedStyle.font;
+    measurement.style.letterSpacing = computedStyle.letterSpacing;
+    document.body.appendChild(measurement);
+
+    for (i = 0; i < options.length; i += 1) {
+      measurement.textContent = options[i].label || 'All endpoints';
+      maxWidth = Math.max(maxWidth, measurement.getBoundingClientRect().width);
+    }
+
+    elements.incidentEndpointFilter.style.width = Math.ceil(maxWidth + 68) + 'px';
+    document.body.removeChild(measurement);
   }
 
   function getFilteredIncidents() {
