@@ -12,6 +12,11 @@
   <div id="app" class="app">
     <div id="dashboard" class="dashboard">
       <div class="status-panel">
+        <button id="openControlsButton" class="status-controls-button" type="button" aria-label="Open controls">
+          <svg class="status-controls-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.07 7.07 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zm-7.14 2.56A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"></path>
+          </svg>
+        </button>
         <div class="status-label">SYSTEM HEALTH</div>
         <div id="overallStatus" class="overall-status status-checking">CHECKING...</div>
         <div id="statusSummary" class="status-summary">Preparing network checks</div>
@@ -69,7 +74,6 @@
     </div>
 
     <div class="app-footer">
-      <div id="controlsHint" class="controls-hint">Tap anywhere to open controls</div>
       <div class="app-credit">
         Created by
         <a class="app-credit-link" href="https://github.com/rogersac/netze" target="_blank" rel="noopener noreferrer">Chet Rogers</a>

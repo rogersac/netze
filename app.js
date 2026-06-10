@@ -47,6 +47,7 @@
     elements.lastChecked = document.getElementById('lastChecked');
     elements.refreshState = document.getElementById('refreshState');
     elements.uptimeValue = document.getElementById('uptimeValue');
+    elements.openControlsButton = document.getElementById('openControlsButton');
     elements.incidentSummaryButton = document.getElementById('incidentSummaryButton');
     elements.incidentCountValue = document.getElementById('incidentCountValue');
     elements.detailsPanel = document.getElementById('detailsPanel');
@@ -63,7 +64,6 @@
     elements.filterFailButton = document.getElementById('filterFailButton');
     elements.filterSlowButton = document.getElementById('filterSlowButton');
     elements.incidentEndpointFilter = document.getElementById('incidentEndpointFilter');
-    elements.controlsHint = document.getElementById('controlsHint');
     elements.controlsModal = document.getElementById('controlsModal');
     elements.controlsBackdrop = document.getElementById('controlsBackdrop');
     elements.controlsDialog = document.getElementById('controlsDialog');
@@ -465,18 +465,12 @@
   }
 
   function bindEvents() {
-    elements.app.addEventListener('click', function (event) {
-      if (state.controlsVisible) {
-        return;
+    elements.openControlsButton.addEventListener('click', function (event) {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
       }
 
-      if (elements.controlsModal.contains(event.target)) {
-        return;
-      }
-
-      if (!state.controlsVisible) {
-        showControls();
-      }
+      showControls();
     });
 
     elements.closeControlsButton.addEventListener('click', function (event) {
@@ -806,10 +800,8 @@
 
     if (state.controlsVisible) {
       elements.controlsModal.className = 'controls-modal active';
-      elements.controlsHint.style.opacity = '0';
     } else {
       elements.controlsModal.className = 'controls-modal';
-      elements.controlsHint.style.opacity = '1';
     }
 
     if (state.activeDetailsTab === 'incidents') {

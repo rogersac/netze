@@ -96,9 +96,46 @@ body {
   -webkit-box-flex: 0;
       -ms-flex: 0 0 auto;
           flex: 0 0 auto;
+  position: relative;
   padding: 4vh 4vw;
   margin-bottom: 2.4vh;
   text-align: center;
+}
+
+.status-controls-button {
+  position: absolute;
+  top: 1.4rem;
+  right: 1.4rem;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #d7dee5;
+  cursor: pointer;
+}
+
+.status-controls-button:active,
+.status-controls-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.status-controls-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  fill: currentColor;
 }
 
 .details-panel {
@@ -504,21 +541,16 @@ body {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
-  -webkit-box-pack: justify;
-      -ms-flex-pack: justify;
-          justify-content: space-between;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
   pointer-events: none;
-}
-
-.controls-hint {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
 }
 
 .app-credit {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.55);
-  text-align: right;
+  text-align: center;
 }
 
 .app-credit-link {
@@ -846,6 +878,13 @@ body {
     font-size: 92px;
   }
 
+  .status-controls-button {
+    top: 1rem;
+    right: 1rem;
+    width: 46px;
+    height: 46px;
+  }
+
   .status-summary {
     font-size: 24px;
   }
@@ -945,14 +984,9 @@ body {
     -webkit-box-direction: normal;
         -ms-flex-direction: column;
             flex-direction: column;
-    -webkit-box-align: stretch;
-        -ms-flex-align: stretch;
-            align-items: stretch;
-  }
-
-  .app-credit {
-    margin-top: 0.6vh;
-    text-align: left;
+    -webkit-box-align: center;
+        -ms-flex-align: center;
+            align-items: center;
   }
 
   .details-tab-button,
