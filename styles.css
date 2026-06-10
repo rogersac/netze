@@ -283,8 +283,7 @@ body {
   gap: 0.8rem;
 }
 
-.details-tab-button,
-.incident-filter-toggle {
+.details-tab-button {
   min-height: 42px;
   padding: 0 1rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -303,12 +302,19 @@ body {
       -ms-flex-align: center;
           align-items: center;
   gap: 0.55rem;
+  min-height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #dbe2e8;
+  font: inherit;
+  font-size: 15px;
   cursor: pointer;
 }
 
 .details-tab-button.active,
 .incident-filter-toggle.active {
-  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
@@ -1095,7 +1101,11 @@ body {
     margin-bottom: 0.8vh;
   }
 
-  .details-tab-button,
+  .details-tab-button {
+    min-height: 38px;
+    font-size: 14px;
+  }
+
   .incident-filter-toggle {
     min-height: 38px;
     font-size: 14px;
